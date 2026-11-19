@@ -4,6 +4,7 @@ package wallabag
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,16 +48,16 @@ func (c *Client) Login(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) Tags(ctx context.Context) ([]string, error) {
+func (c *Client) Tags(ctx context.Context) ([]tagging.Tag, error) {
 	var tags []struct {
 		Label string `json:"label"`
 	}
 	if err := c.do(ctx, http.MethodGet, "/api/tags.json", nil, &tags); err != nil {
 		return nil, err
 	}
-	labels := make([]string, len(tags))
+	labels := make([]tagging.Tag, len(tags))
 	for i, t := range tags {
-		labels[i] = t.Label
+		labels[i] = tagging.Tag(t.Label)
 	}
 	return labels, nil
 }
@@ -85,9 +86,9 @@ func (c *Client) UnreadEntries(ctx context.Context) ([]tagging.Entry, error) {
 		}
 		pages = resp.Pages
 		for _, it := range resp.Embedded.Items {
-			e := tagging.Entry{ID: it.ID, Title: it.Title, URL: it.URL, Domain: it.Domain, Content: it.Content}
+			e := tagging.Entry{ID: tagging.EntryID(it.ID), Title: it.Title, URL: it.URL, Domain: it.Domain, Content: it.Content}
 			for _, t := range it.Tags {
-				e.Tags = append(e.Tags, t.Label)
+				e.Tags = append(e.Tags, tagging.Tag(t.Label))
 			}
 			entries = append(entries, e)
 		}
@@ -95,9 +96,17 @@ func (c *Client) UnreadEntries(ctx context.Context) ([]tagging.Entry, error) {
 	return entries, nil
 }
 
-func (c *Client) AddTags(ctx context.Context, id int, tags []string) error {
+func (c *Client) AddTags(ctx context.Context, id tagging.EntryID, d tagging.Decision) error {
+	tags := d.Tags()
+	if len(tags) == 0 {
+		return errors.New("add tags: empty decision")
+	}
+	labels := make([]string, len(tags))
+	for i, t := range tags {
+		labels[i] = string(t)
+	}
 	path := fmt.Sprintf("/api/entries/%d/tags.json", id)
-	return c.do(ctx, http.MethodPost, path, url.Values{"tags": {strings.Join(tags, ",")}}, nil)
+	return c.do(ctx, http.MethodPost, path, url.Values{"tags": {strings.Join(labels, ",")}}, nil)
 }
 
 // do sends form (if any) and decodes the JSON response into out (if any).

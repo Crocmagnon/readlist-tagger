@@ -91,7 +91,7 @@ func TestUnreadEntriesMapsFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := tagging.Entry{ID: 7, Title: "T", URL: "https://e.x/a", Domain: "e.x", Content: "<p>c</p>", Tags: []string{"go"}}
+	want := tagging.Entry{ID: 7, Title: "T", URL: "https://e.x/a", Domain: "e.x", Content: "<p>c</p>", Tags: []tagging.Tag{"go"}}
 	if len(entries) != 1 || entries[0].ID != want.ID || entries[0].Title != want.Title || entries[0].URL != want.URL ||
 		entries[0].Domain != want.Domain || entries[0].Content != want.Content || !slices.Equal(entries[0].Tags, want.Tags) {
 		t.Fatalf("got %+v, want %+v", entries, want)
@@ -106,7 +106,7 @@ func TestTagsReturnsLabels(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(tags, []string{"ia"}) {
+	if !slices.Equal(tags, []tagging.Tag{"ia"}) {
 		t.Fatalf("got %v", tags)
 	}
 }
@@ -121,7 +121,11 @@ func TestAddTagsPostsCommaJoined(t *testing.T) {
 		}
 		fmt.Fprint(w, `{}`)
 	})
-	if err := login(t, srv).AddTags(context.Background(), 42, []string{"go", "bdd"}); err != nil {
+	d, err := tagging.Answer{Tags: []string{"go", "bdd"}}.Validate(tagging.Existing(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := login(t, srv).AddTags(context.Background(), 42, d); err != nil {
 		t.Fatal(err)
 	}
 	if !called {
@@ -136,5 +140,12 @@ func TestNon2xxIsError(t *testing.T) {
 	_, err := login(t, srv).Tags(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("err = %v, want mention of 500", err)
+	}
+}
+
+func TestAddTagsRejectsEmptyDecision(t *testing.T) {
+	srv := fakeServer(t, func(w http.ResponseWriter, r *http.Request) { t.Error("API must not be called") })
+	if err := login(t, srv).AddTags(context.Background(), 42, tagging.Decision{}); err == nil {
+		t.Fatal("empty decision accepted")
 	}
 }
