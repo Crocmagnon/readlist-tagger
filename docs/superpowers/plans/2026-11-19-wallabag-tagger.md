@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Layout: `cmd/` for the entry point, `internal/domain/` for business code (sub-packages if needed), `internal/adapters/` for everything talking to the outside world. `internal/domain` imports no adapter.
+- Layout: `cmd/` for the entry point, `internal/domain/` for business code (sub-packages if needed), `internal/adapters/` for everything talking to the outside world. `internal/domain` imports no adapter: it receives them (as its port interfaces). Adapters never import each other. Domain and adapter functions only take and return domain structs (or plain values) — no adapter-specific struct in a public signature.
 - Module `github.com/Crocmagnon/wallabag-tagger`, `go 1.27.0`, **no third-party dependencies** (flake `vendorHash = null`).
 - Never remove a tag, never change an entry's title, content, read or starred state. Only call `POST /api/entries/{id}/tags.json`.
 - Only **unread** entries carrying **no tag at all** are processed.
@@ -80,8 +80,7 @@
 - Produces, in `internal/adapters/wallabag` (implements `tagging.Articles`):
   ```go
   package wallabag
-  type Credentials struct{ ClientID, ClientSecret, Username, Password string }
-  func New(baseURL string, creds Credentials, hc *http.Client) *Client
+  func New(baseURL, clientID, clientSecret, username, password string, hc *http.Client) *Client
   func (c *Client) Login(ctx context.Context) error                          // POST /oauth/v2/token, grant_type=password
   func (c *Client) Tags(ctx context.Context) ([]string, error)               // GET /api/tags.json → labels
   func (c *Client) UnreadEntries(ctx context.Context) ([]tagging.Entry, error) // GET /api/entries.json?archive=0&perPage=100&page=N, all pages
