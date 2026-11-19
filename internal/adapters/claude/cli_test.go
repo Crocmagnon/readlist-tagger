@@ -119,3 +119,27 @@ func TestClassifyTimesOut(t *testing.T) {
 		t.Fatalf("err = %v after %s", err, time.Since(start))
 	}
 }
+
+func TestClassifyPassesOnlyAllowedEnv(t *testing.T) {
+	t.Setenv("WALLABAG_PASSWORD", "secret-pass")
+	t.Setenv("WALLABAG_CLIENT_SECRET", "secret-client")
+	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "oauth-token")
+	dir := t.TempDir()
+	ok, err := filepath.Abs(filepath.Join("testdata", "ok.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cli := CLI{Bin: fakeBin(t, "env > "+dir+"/env\ncat "+ok+"\n")}
+	if _, err := cli.Classify(context.Background(), "sys", "user", "{}"); err != nil {
+		t.Fatal(err)
+	}
+	env, _ := os.ReadFile(filepath.Join(dir, "env"))
+	if strings.Contains(string(env), "secret-") {
+		t.Errorf("secrets leaked to claude:\n%s", env)
+	}
+	for _, want := range []string{"CLAUDE_CODE_OAUTH_TOKEN=oauth-token", "PATH=", "HOME="} {
+		if !strings.Contains(string(env), want) {
+			t.Errorf("missing %s in:\n%s", want, env)
+		}
+	}
+}

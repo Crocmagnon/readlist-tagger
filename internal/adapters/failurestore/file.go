@@ -14,8 +14,9 @@ import (
 
 // File is a failure counter backed by a JSON object {"<entry id>": count}.
 type File struct {
-	path   string
-	counts map[tagging.EntryID]int
+	path    string
+	counts  map[tagging.EntryID]int
+	changed bool
 }
 
 var _ tagging.Failures = (*File)(nil)
@@ -37,11 +38,23 @@ func Load(path string) (*File, error) {
 }
 
 func (f *File) Count(id tagging.EntryID) int { return f.counts[id] }
-func (f *File) Record(id tagging.EntryID)    { f.counts[id]++ }
-func (f *File) Clear(id tagging.EntryID)     { delete(f.counts, id) }
+func (f *File) Record(id tagging.EntryID) {
+	f.counts[id]++
+	f.changed = true
+}
 
-// Save writes the counters atomically.
+func (f *File) Clear(id tagging.EntryID) {
+	if _, ok := f.counts[id]; ok {
+		delete(f.counts, id)
+		f.changed = true
+	}
+}
+
+// Save writes the counters atomically, only if they changed since Load.
 func (f *File) Save() error {
+	if !f.changed {
+		return nil
+	}
 	b, err := json.Marshal(f.counts)
 	if err != nil {
 		return err
@@ -58,5 +71,9 @@ func (f *File) Save() error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), f.path)
+	if err := os.Rename(tmp.Name(), f.path); err != nil {
+		return err
+	}
+	f.changed = false
+	return nil
 }

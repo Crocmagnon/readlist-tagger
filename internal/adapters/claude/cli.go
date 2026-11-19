@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -44,6 +46,7 @@ func (c CLI) Classify(ctx context.Context, system, user, schema string) (tagging
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = 5 * time.Second
+	cmd.Env = allowedEnv(os.Environ())
 	cmd.Stdin = strings.NewReader(user)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -55,6 +58,23 @@ func (c CLI) Classify(ctx context.Context, system, user, schema string) (tagging
 			truncate(stderr.String()+" "+resultText(stdout.Bytes()), 500))
 	}
 	return res, err
+}
+
+// envAllowlist is all claude gets from our environment: never the Wallabag credentials.
+var envAllowlist = []string{
+	"HOME", "PATH", "TMPDIR", "LANG", "LC_ALL", "TZ", "TZDIR", "LOCALE_ARCHIVE",
+	"SSL_CERT_FILE", "NIX_SSL_CERT_FILE", "CLAUDE_CODE_OAUTH_TOKEN",
+}
+
+func allowedEnv(environ []string) []string {
+	var env []string
+	for _, kv := range environ {
+		k, _, _ := strings.Cut(kv, "=")
+		if slices.Contains(envAllowlist, k) {
+			env = append(env, kv)
+		}
+	}
+	return env
 }
 
 // output is the part of `claude -p --output-format json` we use.

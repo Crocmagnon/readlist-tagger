@@ -61,3 +61,35 @@ func TestLoadCorruptIsError(t *testing.T) {
 		t.Fatal("corrupt file accepted")
 	}
 }
+
+func TestSaveWithoutChangeDoesNotCreateFile(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "failures.json")
+	f, _ := Load(p)
+	f.Clear(3) // clearing an unknown id is not a change
+	if err := f.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(p); !os.IsNotExist(err) {
+		t.Fatalf("file written without change: %v", err)
+	}
+}
+
+func TestSaveWithoutChangeDoesNotRewrite(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "failures.json")
+	f, _ := Load(p)
+	f.Record(1)
+	if err := f.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(p, 0o400); err != nil { // a rewrite (temp file + rename) would replace the mode
+		t.Fatal(err)
+	}
+	g, _ := Load(p)
+	_ = g.Count(1)
+	if err := g.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := os.Stat(p); st.Mode().Perm() != 0o400 {
+		t.Fatalf("file rewritten without change (mode %v)", st.Mode().Perm())
+	}
+}
