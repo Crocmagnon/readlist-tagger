@@ -43,7 +43,7 @@ func TestParseOutputOK(t *testing.T) {
 }
 
 func TestParseOutputIsError(t *testing.T) {
-	_, err := parseOutput(readFixture(t, "error.json"))
+	_, err := parseOutput(readFixture(t, "auth_error.json"))
 	if !errors.Is(err, tagging.ErrClassifierUnavailable) {
 		t.Fatalf("err = %v", err)
 	}
@@ -78,7 +78,7 @@ cat `+ok+"\n")
 		t.Fatal(err)
 	}
 	args, _ := os.ReadFile(filepath.Join(dir, "args"))
-	for _, want := range []string{"[--tools]\n[]\n", "[--json-schema]\n[{\"type\":\"object\"}]\n", "[--system-prompt]\n[the system]\n", "[-p]\n"} {
+	for _, want := range []string{"[--tools]\n[]\n", "[--strict-mcp-config]\n", "[--setting-sources]\n[]\n", "[--json-schema]\n[{\"type\":\"object\"}]\n", "[--system-prompt]\n[the system]\n", "[-p]\n"} {
 		if !strings.Contains(string(args), want) {
 			t.Errorf("args missing %q in:\n%s", want, args)
 		}
@@ -86,5 +86,36 @@ cat `+ok+"\n")
 	stdin, _ := os.ReadFile(filepath.Join(dir, "stdin"))
 	if string(stdin) != "the user prompt" {
 		t.Errorf("stdin = %q", stdin)
+	}
+}
+
+func TestParseOutputArticleErrorIsNotUnavailable(t *testing.T) {
+	r, err := parseOutput(readFixture(t, "article_error.json"))
+	if err == nil || errors.Is(err, tagging.ErrClassifierUnavailable) || !strings.Contains(err.Error(), "schema") {
+		t.Fatalf("err = %v", err)
+	}
+	if r.CostUSD != 0.02 {
+		t.Fatalf("cost of the failed call lost: %+v", r)
+	}
+}
+
+func TestClassifyNonZeroExitWithJSONKeepsCause(t *testing.T) {
+	auth, err := filepath.Abs(filepath.Join("testdata", "auth_error.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cli := CLI{Bin: fakeBin(t, "cat "+auth+"\nexit 1\n")}
+	_, err = cli.Classify(context.Background(), "sys", "user", "{}")
+	if !errors.Is(err, tagging.ErrClassifierUnavailable) || !strings.Contains(err.Error(), "Invalid bearer token") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestClassifyTimesOut(t *testing.T) {
+	cli := CLI{Bin: fakeBin(t, "sleep 10\n"), Timeout: 200 * time.Millisecond}
+	start := time.Now()
+	_, err := cli.Classify(context.Background(), "sys", "user", "{}")
+	if !errors.Is(err, tagging.ErrClassifierUnavailable) || time.Since(start) > 5*time.Second {
+		t.Fatalf("err = %v after %s", err, time.Since(start))
 	}
 }

@@ -60,7 +60,7 @@ func run() int {
 		return 1
 	}
 
-	cl := claude.CLI{Bin: cmp.Or(os.Getenv("CLAUDE_BIN"), "claude"), Model: "opus", Effort: "low"}
+	cl := claude.CLI{Bin: cmp.Or(os.Getenv("CLAUDE_BIN"), "claude"), Model: "opus", Effort: "low", Timeout: 3 * time.Minute}
 	if _, err := tagging.Run(ctx, wb, cl, failures, log); err != nil {
 		log.Error("run", "error", err)
 		return 1
