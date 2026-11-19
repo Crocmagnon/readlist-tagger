@@ -25,29 +25,34 @@ by theme **on the Kobo, offline**.
 
 ## Goals
 
-- Every unread article gets one or more tags from the fixed list below, within about a minute of
-  being saved.
+- Every unread article gets one or more tags within about a minute of being saved, chosen from
+  the existing tags first; the model may create a new tag when none fits.
 - Articles that are not reading material get `pas-a-lire`.
 - Runs unattended on srv-1, at no extra cost beyond Gabriel's Claude subscription.
+- Observable from `journalctl`: what it tagged, what it created, what failed, what it cost.
 
 ## Non-goals
 
 - Archived (read) articles are never tagged.
-- No tag-list discovery at runtime: the list is fixed in code (it was derived once, by hand, from
-  the existing 1,675 articles).
 - No KoReader fork or patch.
+- No automatic merging or clean-up of tags: Gabriel prunes by hand, helped by the logs.
 
 ## Anti-goals
 
-- Must not touch an article's content, title, read/starred state, or any tag outside the managed
-  list. Tags Gabriel adds by hand stay.
+- Must not touch an article's content, title, read/starred state, or remove any tag.
 - Must not re-tag in a loop, nor spend Claude calls on an article that is already tagged.
+- Must not let tags proliferate: a Kobo keyword list of dozens of near-duplicates defeats the
+  purpose.
+- Must not force an article into an ill-fitting existing tag: a wrong tag pollutes that theme's
+  filter, which is worse than a tag used once.
 - Article content is untrusted input: a page must not be able to make the tagger do anything
-  beyond picking tags from the list.
+  beyond picking or naming tags.
 
-## Tag list (managed tags)
+## Seed tags
 
-Lowercase, no accents (legible and sortable on the Kobo). Several themes per article are allowed.
+The 13 tags below are defined in code, with their description, and are always offered to the
+model. They were derived once, by hand, from the existing 1,675 articles. Lowercase, no accents
+(legible and sortable on the Kobo). Several tags per article are allowed.
 
 | Tag | Scope |
 |---|---|
@@ -68,34 +73,64 @@ Lowercase, no accents (legible and sortable on the Kobo). Several themes per art
 `pas-a-lire` is decided by the model, not by Wallabag domain rules: it also catches tool homepages
 and media a domain list would miss. An article may carry `pas-a-lire` alone.
 
+## Existing and new tags
+
+- **Existing tags** = the seed tags plus every other tag currently in Wallabag
+  (`GET /api/tags.json`, read at each run). Tags created earlier by the model (or by hand) are
+  offered by name only, without a description.
+- The model picks as many **existing** tags as genuinely fit.
+- It may also propose **at most one new tag** per article, only when no existing tag fits a
+  significant theme of the article. A new tag may come alone or next to existing ones; there is
+  no obligation to also pick an existing tag.
+- At least one tag in total per article.
+- A new tag must match `^[a-z0-9-]{2,20}$` (checked in Go, not only in the schema) and must not
+  duplicate an existing tag.
+- The prompt says to prefer existing tags and to name new ones as broad, reusable themes, not
+  article-specific labels.
+
 ## Behaviour
 
 Every minute (systemd timer on srv-1):
 
-1. Get an OAuth token from Wallabag (password grant) and list **unread** entries.
-2. Keep entries that carry **none** of the managed tags.
+1. Get an OAuth token from Wallabag (password grant), read the tag list, list **unread** entries.
+2. Keep entries that carry **no tag at all**.
 3. For each one, call `claude -p` with the title, domain, URL and the beginning of the article
-   text (HTML stripped). The prompt describes the tag list above. Output is structured JSON
-   constrained by `--json-schema`: a non-empty array whose items are an enum of the managed tags.
-4. Validate the answer against the list in Go too; then add the tags to the entry
-   (`POST /api/entries/{id}/tags.json`).
+   text (HTML stripped), plus the existing tags (seed tags with descriptions). Output is
+   structured JSON constrained by `--json-schema`, built per run: `tags` (array, items an enum of
+   the existing tags) and an optional `new_tag` (string, pattern above).
+4. Validate the answer in Go (enum, pattern, at most one new tag, at least one tag in total);
+   then add the tags to the entry (`POST /api/entries/{id}/tags.json`). The new tag is created
+   by that call. The next article in the same run sees it as existing.
 5. If an entry fails (invalid output, API error on that entry), go on with the others, then exit
-   non-zero so the healthcheck goes red. The failed entry has no managed tag, so the next run
-   retries it.
+   non-zero so the healthcheck goes red. The failed entry has no tag, so the next run retries it.
 6. If the `claude` CLI itself fails (auth, usage limit, network), stop the run at once instead of
    trying the remaining entries; exit non-zero.
 
-"Has a managed tag" is the only marker of "done". The one piece of state is a small failure
-counter per entry id, in a file under the service's state directory (which exists anyway as
-`claude`'s `$HOME`): after **3** failed attempts an entry is skipped, so a poisoned article does
-not cost a Claude call every minute. While any entry is skipped this way, the run exits non-zero
-(healthcheck stays red, the log names the entry ids). Deleting the file resets it. *(Designer's
-call: a Wallabag marker tag was rejected because it would break the "never touch a tag outside the
-managed list" rule.)*
+"Has at least one tag" is the only marker of "done" (possible because all old tags were deleted
+and Gabriel no longer tags by hand). The one piece of state is a small failure counter per entry
+id, in a file under the service's state directory (which exists anyway as `claude`'s `$HOME`):
+after **3** failed attempts an entry is skipped, so a poisoned article does not cost a Claude call
+every minute. While any entry is skipped this way, the run exits non-zero (healthcheck stays red,
+the log names the entry ids). Deleting the file resets it. *(Designer's call: a Wallabag marker
+tag would show up as a keyword on the Kobo.)*
 
-Removing every managed tag from an article by hand makes it eligible again: it will be re-tagged
-within a minute. To correct a wrong tag, replace it with the right managed tag(s). There is no
-"no theme" opt-out. *(Designer's call: rare case, not worth a marker.)*
+Removing every tag from an article by hand makes it eligible again: it will be re-tagged within a
+minute. To correct a wrong tag, replace it with the right one. There is no "no theme" opt-out.
+*(Designer's call: rare case, not worth a marker.)*
+
+## Observability
+
+Logs go to stdout/stderr (journald), plain text, one event per line, greppable:
+
+- Each tagged article: entry id, title, tags applied, duration, and the call's cost/usage as
+  reported by `claude -p --output-format json`. When a tag is created, the line carries a fixed
+  marker `NEW TAG <name>` so `journalctl -u wallabag-tagger | grep "NEW TAG"` lists every
+  creation.
+- Each failure: entry id, cause, and the `claude` stderr (truncated).
+- Entries skipped after 3 failures: their ids, on every run.
+- A summary per run (examined, tagged, failed, skipped, total cost), **only when there was
+  work**: an idle run writes nothing, so the journal is not one line per minute. The healthcheck
+  pings show the service is alive.
 
 The first run tags the 135 currently unread articles (old tags were already deleted by hand on
 2026-11-19).
@@ -140,6 +175,6 @@ The first run tags the 135 currently unread articles (old tags were already dele
 
 - How much article text to send (enough to judge the theme; a few thousand characters).
 - Prompt wording, model flag, CLI flags beyond the ones above.
-- Go package layout, HTTP client, tests (at least: managed-tag filtering, output validation,
+- Go package layout, HTTP client, tests (at least: untagged-entry filtering, output validation (enum, new-tag pattern and limit),
   prompt building; Wallabag and `claude` behind small interfaces or fakes).
 - Running Claude calls sequentially is fine (a handful of new articles a week; 135 once).
