@@ -43,7 +43,7 @@ func fakeServer(t *testing.T, api http.HandlerFunc) *httptest.Server {
 
 func login(t *testing.T, srv *httptest.Server) *Client {
 	t.Helper()
-	c := New(srv.URL, "cid", "csecret", "user", "pass", srv.Client())
+	c := New(srv.URL, Credentials{ClientID: "cid", ClientSecret: "csecret", Username: "user", Password: "pass"}, srv.Client())
 	if err := c.Login(context.Background()); err != nil {
 		t.Fatal(err)
 	}

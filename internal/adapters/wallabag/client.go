@@ -15,21 +15,21 @@ import (
 	"github.com/Crocmagnon/wallabag-tagger/internal/domain/tagging"
 )
 
+// Credentials authenticate against the Wallabag API (password grant).
+type Credentials struct{ ClientID, ClientSecret, Username, Password string }
+
 // Client is an authenticated Wallabag API client. Call Login before anything else.
 type Client struct {
-	baseURL                                    string
-	clientID, clientSecret, username, password string
-	hc                                         *http.Client
-	token                                      string
+	baseURL string
+	creds   Credentials
+	hc      *http.Client
+	token   string
 }
 
 var _ tagging.Articles = (*Client)(nil)
 
-func New(baseURL, clientID, clientSecret, username, password string, hc *http.Client) *Client {
-	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"), clientID: clientID, clientSecret: clientSecret,
-		username: username, password: password, hc: hc,
-	}
+func New(baseURL string, creds Credentials, hc *http.Client) *Client {
+	return &Client{baseURL: strings.TrimRight(baseURL, "/"), creds: creds, hc: hc}
 }
 
 // Login gets an access token with the password grant.
@@ -38,8 +38,8 @@ func (c *Client) Login(ctx context.Context) error {
 		AccessToken string `json:"access_token"`
 	}
 	err := c.do(ctx, http.MethodPost, "/oauth/v2/token", url.Values{
-		"grant_type": {"password"}, "client_id": {c.clientID}, "client_secret": {c.clientSecret},
-		"username": {c.username}, "password": {c.password},
+		"grant_type": {"password"}, "client_id": {c.creds.ClientID}, "client_secret": {c.creds.ClientSecret},
+		"username": {c.creds.Username}, "password": {c.creds.Password},
 	}, &tok)
 	if err != nil {
 		return err

@@ -16,8 +16,9 @@ nix build   # only sees git-tracked files: `git add` new files first
   declares the ports it needs (interfaces) and receives the adapters.
 - `internal/adapters/`: everything that talks to the outside world (API clients, CLIs, files,
   databases). Adapters never import each other.
-- Domain and adapter functions only take and return domain types (or plain values): no
-  adapter-specific struct in a public signature.
+- Functions the domain calls (its ports, implemented by adapters) only take and return domain
+  types or plain values. Constructors and setup called only by `cmd/` may take adapter-specific
+  types (e.g. `wallabag.Credentials`).
 - Domain types are strongly typed so that invalid states do not compile where possible (e.g.
   `EntryID`, `Tag`, and `Decision`, which only `Answer.Validate` can build and is never empty).
 

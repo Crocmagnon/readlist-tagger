@@ -46,8 +46,10 @@ func run() int {
 	}))
 
 	ctx := context.Background()
-	wb := wallabag.New(env["WALLABAG_URL"], env["WALLABAG_CLIENT_ID"], env["WALLABAG_CLIENT_SECRET"],
-		env["WALLABAG_USERNAME"], env["WALLABAG_PASSWORD"], &http.Client{Timeout: 60 * time.Second})
+	wb := wallabag.New(env["WALLABAG_URL"], wallabag.Credentials{
+		ClientID: env["WALLABAG_CLIENT_ID"], ClientSecret: env["WALLABAG_CLIENT_SECRET"],
+		Username: env["WALLABAG_USERNAME"], Password: env["WALLABAG_PASSWORD"],
+	}, &http.Client{Timeout: 60 * time.Second})
 	if err := wb.Login(ctx); err != nil {
 		log.Error("wallabag login", "error", err)
 		return 1
