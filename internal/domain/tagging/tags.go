@@ -28,7 +28,7 @@ var Seeds = []Seed{
 	{"societe", "Tech and society: digital sovereignty, enshittification, environmental footprint"},
 	{"histoire", "History and culture of computing"},
 	{"hors-tech", "Personal finance, cooking, health, fiction, literature"},
-	{"pas-a-lire", "Not long-form reading material: code repositories, videos, podcasts, tool or product homepages, tweets"},
+	{"hors-liseuse", "Not long-form reading material: code repositories, videos, podcasts, tool or product homepages, tweets"},
 }
 
 const newTagPattern = `^[a-z0-9-]{2,20}$`

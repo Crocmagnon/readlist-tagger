@@ -18,7 +18,7 @@ by theme **on the Kobo, offline**.
 - KoReader shows subjects as "Keywords" and can filter a collection by keyword offline
   (`frontend/apps/filemanager/filemanagercollection.lua`). Gabriel has a "Wallabag" collection
   connected to the plugin's download folder.
-- The plugin's "Do not download articles with tags" setting excludes `pas-a-lire` at sync.
+- The plugin's "Do not download articles with tags" setting excludes `hors-liseuse` at sync.
 - KoReader caches book metadata: tags added to an already-downloaded article only show after
   "Refresh cached book information" or a re-download. New articles are fine since the tagger runs
   within a minute of the article being saved, before any sync.
@@ -27,7 +27,7 @@ by theme **on the Kobo, offline**.
 
 - Every unread article gets one or more tags within about a minute of being saved, chosen from
   the existing tags first; the model may create a new tag when none fits.
-- Articles that are not reading material get `pas-a-lire`.
+- Articles that are not reading material get `hors-liseuse`.
 - Runs unattended on srv-1, at no extra cost beyond Gabriel's Claude subscription.
 - Observable from `journalctl`: what it tagged, what it created, what failed, what it cost.
 
@@ -68,10 +68,10 @@ model. They were derived once, by hand, from the existing 1,675 articles. Lowerc
 | `societe` | Tech and society: digital sovereignty, enshittification, environmental footprint |
 | `histoire` | History and culture of computing |
 | `hors-tech` | Personal finance, cooking, health, fiction, literature |
-| `pas-a-lire` | Not long-form reading material: code repositories, videos, podcasts, tool or product homepages, tweets |
+| `hors-liseuse` | Not long-form reading material: code repositories, videos, podcasts, tool or product homepages, tweets |
 
-`pas-a-lire` is decided by the model, not by Wallabag domain rules: it also catches tool homepages
-and media a domain list would miss. An article may carry `pas-a-lire` alone.
+`hors-liseuse` is decided by the model, not by Wallabag domain rules: it also catches tool homepages
+and media a domain list would miss. An article may carry `hors-liseuse` alone.
 
 ## Existing and new tags
 
@@ -167,7 +167,7 @@ The first run tags the 135 currently unread articles (old tags were already dele
 
 ## Manual steps after deploy (Gabriel)
 
-- KoReader Wallabag plugin: "Do not download articles with tags" → `pas-a-lire`.
+- KoReader Wallabag plugin: "Do not download articles with tags" → `hors-liseuse`.
 - Delete the local Wallabag folder on the Kobo and sync again, so already-downloaded articles come
   back with their tags.
 
