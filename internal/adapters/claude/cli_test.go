@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Crocmagnon/wallabag-tagger/internal/domain/tagging"
+	"github.com/Crocmagnon/readlist-tagger/internal/domain/tagging"
 )
 
 func readFixture(t *testing.T, name string) []byte {

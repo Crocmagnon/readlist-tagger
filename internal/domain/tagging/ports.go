@@ -1,4 +1,4 @@
-// Package tagging holds the business rules of wallabag-tagger: which articles to tag, which tags
+// Package tagging holds the business rules of readlist-tagger: which articles to tag, which tags
 // are allowed, and the ports it needs from the outside world.
 package tagging
 
@@ -9,9 +9,9 @@ import (
 )
 
 // EntryID identifies an article.
-type EntryID int
+type EntryID string
 
-// Tag is a tag label as stored in Wallabag.
+// Tag is a tag label as stored by the service.
 type Tag string
 
 // Entry is an unread article as seen by the tagger.
@@ -20,7 +20,7 @@ type Entry struct {
 	Title   string
 	URL     string
 	Domain  string
-	Content string // HTML as stored by Wallabag
+	Content string // article HTML as stored by the service
 	Tags    []Tag
 }
 

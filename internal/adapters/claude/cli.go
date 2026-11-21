@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Crocmagnon/wallabag-tagger/internal/domain/tagging"
+	"github.com/Crocmagnon/readlist-tagger/internal/domain/tagging"
 )
 
 // CLI runs `claude -p` with no tools, no MCP server, no settings, and a JSON Schema for the

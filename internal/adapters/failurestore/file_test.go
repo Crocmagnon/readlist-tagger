@@ -11,27 +11,27 @@ func TestLoadMissingIsEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f.Count(1) != 0 {
-		t.Fatalf("Count = %d", f.Count(1))
+	if f.Count("1") != 0 {
+		t.Fatalf("Count = %d", f.Count("1"))
 	}
 }
 
 func TestRecordIncrements(t *testing.T) {
 	f, _ := Load(filepath.Join(t.TempDir(), "failures.json"))
 	for range 3 {
-		f.Record(7)
+		f.Record("7")
 	}
-	if f.Count(7) != 3 {
-		t.Fatalf("Count = %d", f.Count(7))
+	if f.Count("7") != 3 {
+		t.Fatalf("Count = %d", f.Count("7"))
 	}
 }
 
 func TestSaveLoadRoundTrip(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "failures.json")
 	f, _ := Load(p)
-	f.Record(7)
-	f.Record(7)
-	f.Record(9)
+	f.Record("7")
+	f.Record("7")
+	f.Record("9")
 	if err := f.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -39,16 +39,16 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if g.Count(7) != 2 || g.Count(9) != 1 {
-		t.Fatalf("got 7→%d 9→%d", g.Count(7), g.Count(9))
+	if g.Count("7") != 2 || g.Count("9") != 1 {
+		t.Fatalf("got 7→%d 9→%d", g.Count("7"), g.Count("9"))
 	}
-	g.Clear(7)
+	g.Clear("7")
 	if err := g.Save(); err != nil {
 		t.Fatal(err)
 	}
 	h, _ := Load(p)
-	if h.Count(7) != 0 || h.Count(9) != 1 {
-		t.Fatalf("got 7→%d 9→%d", h.Count(7), h.Count(9))
+	if h.Count("7") != 0 || h.Count("9") != 1 {
+		t.Fatalf("got 7→%d 9→%d", h.Count("7"), h.Count("9"))
 	}
 }
 
@@ -65,7 +65,7 @@ func TestLoadCorruptIsError(t *testing.T) {
 func TestSaveWithoutChangeDoesNotCreateFile(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "failures.json")
 	f, _ := Load(p)
-	f.Clear(3) // clearing an unknown id is not a change
+	f.Clear("3") // clearing an unknown id is not a change
 	if err := f.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestSaveWithoutChangeDoesNotCreateFile(t *testing.T) {
 func TestSaveWithoutChangeDoesNotRewrite(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "failures.json")
 	f, _ := Load(p)
-	f.Record(1)
+	f.Record("1")
 	if err := f.Save(); err != nil {
 		t.Fatal(err)
 	}
@@ -85,11 +85,26 @@ func TestSaveWithoutChangeDoesNotRewrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	g, _ := Load(p)
-	_ = g.Count(1)
+	_ = g.Count("1")
 	if err := g.Save(); err != nil {
 		t.Fatal(err)
 	}
 	if st, _ := os.Stat(p); st.Mode().Perm() != 0o400 {
 		t.Fatalf("file rewritten without change (mode %v)", st.Mode().Perm())
+	}
+}
+
+// A failures.json written when Wallabag ids were integers must still load.
+func TestLoadWallabagNumericKeys(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "failures.json")
+	if err := os.WriteFile(path, []byte(`{"123": 2}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	f, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Count("123") != 2 {
+		t.Fatalf("Count = %d", f.Count("123"))
 	}
 }

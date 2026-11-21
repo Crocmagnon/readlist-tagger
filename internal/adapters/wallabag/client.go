@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Crocmagnon/wallabag-tagger/internal/domain/tagging"
+	"github.com/Crocmagnon/readlist-tagger/internal/domain/tagging"
 )
 
 // Credentials authenticate against the Wallabag API (password grant).
@@ -86,7 +86,7 @@ func (c *Client) UnreadEntries(ctx context.Context) ([]tagging.Entry, error) {
 		}
 		pages = resp.Pages
 		for _, it := range resp.Embedded.Items {
-			e := tagging.Entry{ID: tagging.EntryID(it.ID), Title: it.Title, URL: it.URL, Domain: it.Domain, Content: it.Content}
+			e := tagging.Entry{ID: tagging.EntryID(strconv.Itoa(it.ID)), Title: it.Title, URL: it.URL, Domain: it.Domain, Content: it.Content}
 			for _, t := range it.Tags {
 				e.Tags = append(e.Tags, tagging.Tag(t.Label))
 			}
@@ -105,7 +105,7 @@ func (c *Client) AddTags(ctx context.Context, id tagging.EntryID, d tagging.Deci
 	for i, t := range tags {
 		labels[i] = string(t)
 	}
-	path := fmt.Sprintf("/api/entries/%d/tags.json", id)
+	path := fmt.Sprintf("/api/entries/%s/tags.json", id)
 	return c.do(ctx, http.MethodPost, path, url.Values{"tags": {strings.Join(labels, ",")}}, nil)
 }
 
