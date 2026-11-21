@@ -58,6 +58,9 @@ type bookmark struct {
 // loading are left for a later run.
 func (c *Client) UnreadEntries(ctx context.Context) ([]tagging.Entry, error) {
 	var entries []tagging.Entry
+	// Readeck sorts by creation date, newest first: a bookmark created while we page through
+	// shifts the pages by one and repeats a bookmark across two of them.
+	seen := map[string]bool{}
 	for offset := 0; ; offset += c.pageSize {
 		q := url.Values{
 			"is_archived": {"false"}, "has_labels": {"false"}, "is_loaded": {"true"},
@@ -68,6 +71,10 @@ func (c *Client) UnreadEntries(ctx context.Context) ([]tagging.Entry, error) {
 			return nil, err
 		}
 		for _, b := range page {
+			if seen[b.ID] {
+				continue
+			}
+			seen[b.ID] = true
 			e, err := c.entry(ctx, b)
 			if err != nil {
 				return nil, err

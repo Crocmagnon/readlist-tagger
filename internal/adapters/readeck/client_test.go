@@ -184,3 +184,28 @@ func TestAddTagsRejectsEmptyDecision(t *testing.T) {
 		t.Fatal("want an error")
 	}
 }
+
+// A bookmark created during the listing shifts offset pages by one: the last bookmark of a page
+// comes back at the top of the next one. It must be listed (and tagged) once.
+func TestUnreadEntriesSkipsRepeatsAcrossPages(t *testing.T) {
+	pages := map[string]string{
+		"0": `[{"id":"a","has_article":false},{"id":"b","has_article":false}]`,
+		"2": `[{"id":"b","has_article":false},{"id":"c","has_article":false}]`,
+		"4": `[]`,
+	}
+	c := fakeServer(t, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, pages[r.URL.Query().Get("offset")])
+	})
+	c.pageSize = 2
+	entries, err := c.UnreadEntries(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []tagging.EntryID
+	for _, e := range entries {
+		ids = append(ids, e.ID)
+	}
+	if !slices.Equal(ids, []tagging.EntryID{"a", "b", "c"}) {
+		t.Fatalf("got ids %v", ids)
+	}
+}
