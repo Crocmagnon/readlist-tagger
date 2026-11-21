@@ -123,6 +123,7 @@ func TestClassifyTimesOut(t *testing.T) {
 func TestClassifyPassesOnlyAllowedEnv(t *testing.T) {
 	t.Setenv("WALLABAG_PASSWORD", "secret-pass")
 	t.Setenv("WALLABAG_CLIENT_SECRET", "secret-client")
+	t.Setenv("READECK_TOKEN", "secret-token")
 	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "oauth-token")
 	dir := t.TempDir()
 	ok, err := filepath.Abs(filepath.Join("testdata", "ok.json"))
