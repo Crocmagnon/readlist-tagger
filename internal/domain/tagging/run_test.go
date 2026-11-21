@@ -62,13 +62,13 @@ func run(t *testing.T, a *fakeArticles, c *fakeClassifier, f *fakeFailures) (Sum
 }
 
 func TestRunTagsOnlyUntagged(t *testing.T) {
-	a := &fakeArticles{entries: []Entry{{ID: 1, Title: "a"}, {ID: 2, Title: "b", Tags: []Tag{"go"}}}}
+	a := &fakeArticles{entries: []Entry{{ID: "1", Title: "a"}, {ID: "2", Title: "b", Tags: []Tag{"go"}}}}
 	c := &fakeClassifier{answers: []Answer{{Tags: []string{"bdd"}}}}
 	s, err, _ := run(t, a, c, newFailures())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(c.schemas) != 1 || !slices.Equal(a.added[1], []Tag{"bdd"}) || len(a.added) != 1 {
+	if len(c.schemas) != 1 || !slices.Equal(a.added["1"], []Tag{"bdd"}) || len(a.added) != 1 {
 		t.Fatalf("calls %d, added %v", len(c.schemas), a.added)
 	}
 	if s.Examined != 1 || s.Tagged != 1 {
@@ -77,7 +77,7 @@ func TestRunTagsOnlyUntagged(t *testing.T) {
 }
 
 func TestRunLogsNewTagAndReusesIt(t *testing.T) {
-	a := &fakeArticles{entries: []Entry{{ID: 1}, {ID: 2}}}
+	a := &fakeArticles{entries: []Entry{{ID: "1"}, {ID: "2"}}}
 	c := &fakeClassifier{answers: []Answer{{NewTag: "electronique"}, {Tags: []string{"electronique"}}}}
 	_, err, log := run(t, a, c, newFailures())
 	if err != nil {
@@ -86,22 +86,22 @@ func TestRunLogsNewTagAndReusesIt(t *testing.T) {
 	if n := strings.Count(log, "NEW TAG electronique"); n != 1 {
 		t.Fatalf("NEW TAG logged %d times:\n%s", n, log)
 	}
-	if !strings.Contains(c.schemas[1], `"electronique"`) || !slices.Equal(a.added[2], []Tag{"electronique"}) {
+	if !strings.Contains(c.schemas[1], `"electronique"`) || !slices.Equal(a.added["2"], []Tag{"electronique"}) {
 		t.Fatalf("second call did not see the new tag: %s / %v", c.schemas[1], a.added)
 	}
 }
 
 func TestRunInvalidAnswerCountsFailure(t *testing.T) {
-	a := &fakeArticles{entries: []Entry{{ID: 1}}}
+	a := &fakeArticles{entries: []Entry{{ID: "1"}}}
 	f := newFailures()
 	s, err, _ := run(t, a, &fakeClassifier{answers: []Answer{{Tags: []string{"IA"}}}}, f)
-	if len(a.added) != 0 || s.Failed != 1 || f.counts[1] != 1 || !errors.Is(err, ErrIncomplete) {
-		t.Fatalf("added %v, summary %+v, count %d, err %v", a.added, s, f.counts[1], err)
+	if len(a.added) != 0 || s.Failed != 1 || f.counts["1"] != 1 || !errors.Is(err, ErrIncomplete) {
+		t.Fatalf("added %v, summary %+v, count %d, err %v", a.added, s, f.counts["1"], err)
 	}
 }
 
 func TestRunStopsWhenClassifierUnavailable(t *testing.T) {
-	a := &fakeArticles{entries: []Entry{{ID: 1}, {ID: 2}, {ID: 3}}}
+	a := &fakeArticles{entries: []Entry{{ID: "1"}, {ID: "2"}, {ID: "3"}}}
 	c := &fakeClassifier{errs: []error{fmt.Errorf("x: %w", ErrClassifierUnavailable)}}
 	f := newFailures()
 	_, err, _ := run(t, a, c, f)
@@ -111,9 +111,9 @@ func TestRunStopsWhenClassifierUnavailable(t *testing.T) {
 }
 
 func TestRunSkipsExhausted(t *testing.T) {
-	a := &fakeArticles{entries: []Entry{{ID: 5}}}
+	a := &fakeArticles{entries: []Entry{{ID: "5"}}}
 	f := newFailures()
-	f.counts[5] = MaxAttempts
+	f.counts["5"] = MaxAttempts
 	c := &fakeClassifier{}
 	s, err, log := run(t, a, c, f)
 	if len(c.schemas) != 0 || s.Skipped != 1 || err == nil || !strings.Contains(log, "skipped") || !strings.Contains(log, "entry_id=5") {
@@ -122,7 +122,7 @@ func TestRunSkipsExhausted(t *testing.T) {
 }
 
 func TestRunIdleLogsNothing(t *testing.T) {
-	a := &fakeArticles{entries: []Entry{{ID: 1, Tags: []Tag{"go"}}}}
+	a := &fakeArticles{entries: []Entry{{ID: "1", Tags: []Tag{"go"}}}}
 	_, err, log := run(t, a, &fakeClassifier{}, newFailures())
 	if err != nil || log != "" {
 		t.Fatalf("err %v, log %q", err, log)
@@ -130,11 +130,11 @@ func TestRunIdleLogsNothing(t *testing.T) {
 }
 
 func TestRunClearsFailureOnSuccess(t *testing.T) {
-	a := &fakeArticles{entries: []Entry{{ID: 1}}}
+	a := &fakeArticles{entries: []Entry{{ID: "1"}}}
 	f := newFailures()
-	f.counts[1] = 2
+	f.counts["1"] = 2
 	_, err, _ := run(t, a, &fakeClassifier{answers: []Answer{{Tags: []string{"go"}}}}, f)
-	if err != nil || f.counts[1] != 0 || !f.saved {
-		t.Fatalf("err %v, count %d, saved %v", err, f.counts[1], f.saved)
+	if err != nil || f.counts["1"] != 0 || !f.saved {
+		t.Fatalf("err %v, count %d, saved %v", err, f.counts["1"], f.saved)
 	}
 }

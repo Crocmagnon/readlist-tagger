@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Crocmagnon/wallabag-tagger/internal/adapters/claude"
-	"github.com/Crocmagnon/wallabag-tagger/internal/adapters/failurestore"
-	"github.com/Crocmagnon/wallabag-tagger/internal/adapters/wallabag"
-	"github.com/Crocmagnon/wallabag-tagger/internal/domain/tagging"
+	"github.com/Crocmagnon/readlist-tagger/internal/adapters/claude"
+	"github.com/Crocmagnon/readlist-tagger/internal/adapters/failurestore"
+	"github.com/Crocmagnon/readlist-tagger/internal/adapters/wallabag"
+	"github.com/Crocmagnon/readlist-tagger/internal/domain/tagging"
 )
 
 func main() {

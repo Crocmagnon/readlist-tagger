@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Crocmagnon/wallabag-tagger/internal/domain/tagging"
+	"github.com/Crocmagnon/readlist-tagger/internal/domain/tagging"
 )
 
 // CLI runs `claude -p` with no tools, no MCP server, no settings, and a JSON Schema for the
@@ -60,7 +60,7 @@ func (c CLI) Classify(ctx context.Context, system, user, schema string) (tagging
 	return res, err
 }
 
-// envAllowlist is all claude gets from our environment: never the Wallabag credentials.
+// envAllowlist is all claude gets from our environment: never the service credentials.
 var envAllowlist = []string{
 	"HOME", "PATH", "TMPDIR", "LANG", "LC_ALL", "TZ", "TZDIR", "LOCALE_ARCHIVE",
 	"SSL_CERT_FILE", "NIX_SSL_CERT_FILE", "CLAUDE_CODE_OAUTH_TOKEN",

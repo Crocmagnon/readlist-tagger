@@ -1,5 +1,5 @@
 {
-  description = "Auto-tag unread Wallabag articles by theme with Claude";
+  description = "Auto-tag unread read-it-later articles (Readeck, Wallabag) by theme with Claude";
 
   inputs.nixpkgs.url = "nixpkgs/nixos-26.05";
 
@@ -19,17 +19,21 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          # go.mod requires Go 1.27.
+          tagger =
+            name:
+            (pkgs.buildGoModule.override { go = pkgs.go_1_27; }) {
+              pname = name;
+              version = "latest";
+              src = ./.;
+              vendorHash = null; # no dependencies
+              subPackages = [ "cmd/${name}" ];
+            };
         in
         rec {
-          # go.mod requires Go 1.27.
-          wallabag-tagger = (pkgs.buildGoModule.override { go = pkgs.go_1_27; }) {
-            pname = "wallabag-tagger";
-            version = "latest";
-            src = ./.;
-            vendorHash = null; # no dependencies
-            subPackages = [ "cmd/wallabag-tagger" ];
-          };
-          default = wallabag-tagger;
+          readeck-tagger = tagger "readeck-tagger";
+          wallabag-tagger = tagger "wallabag-tagger";
+          default = readeck-tagger;
         }
       );
     };

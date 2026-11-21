@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Crocmagnon/wallabag-tagger/internal/domain/tagging"
+	"github.com/Crocmagnon/readlist-tagger/internal/domain/tagging"
 )
 
 // fakeServer serves the token endpoint and delegates /api/ requests to api after checking the bearer.
@@ -91,7 +91,7 @@ func TestUnreadEntriesMapsFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := tagging.Entry{ID: 7, Title: "T", URL: "https://e.x/a", Domain: "e.x", Content: "<p>c</p>", Tags: []tagging.Tag{"go"}}
+	want := tagging.Entry{ID: "7", Title: "T", URL: "https://e.x/a", Domain: "e.x", Content: "<p>c</p>", Tags: []tagging.Tag{"go"}}
 	if len(entries) != 1 || entries[0].ID != want.ID || entries[0].Title != want.Title || entries[0].URL != want.URL ||
 		entries[0].Domain != want.Domain || entries[0].Content != want.Content || !slices.Equal(entries[0].Tags, want.Tags) {
 		t.Fatalf("got %+v, want %+v", entries, want)
@@ -125,7 +125,7 @@ func TestAddTagsPostsCommaJoined(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := login(t, srv).AddTags(context.Background(), 42, d); err != nil {
+	if err := login(t, srv).AddTags(context.Background(), "42", d); err != nil {
 		t.Fatal(err)
 	}
 	if !called {
@@ -145,7 +145,7 @@ func TestNon2xxIsError(t *testing.T) {
 
 func TestAddTagsRejectsEmptyDecision(t *testing.T) {
 	srv := fakeServer(t, func(w http.ResponseWriter, r *http.Request) { t.Error("API must not be called") })
-	if err := login(t, srv).AddTags(context.Background(), 42, tagging.Decision{}); err == nil {
+	if err := login(t, srv).AddTags(context.Background(), "42", tagging.Decision{}); err == nil {
 		t.Fatal("empty decision accepted")
 	}
 }

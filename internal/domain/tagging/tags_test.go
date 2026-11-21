@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestExistingMergesSeedsAndWallabag(t *testing.T) {
+func TestExistingMergesSeedsAndServiceTags(t *testing.T) {
 	got := Existing([]Tag{"electronique", "go"})
 	for _, s := range Seeds {
 		if !slices.Contains(got, s.Name) {

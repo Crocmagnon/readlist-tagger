@@ -21,7 +21,7 @@ var ErrIncomplete = errors.New("some entries were not tagged")
 
 // Run tags every unread entry that has no tag yet.
 func Run(ctx context.Context, articles Articles, cl Classifier, f Failures, log *slog.Logger) (s Summary, err error) {
-	wallabagTags, err := articles.Tags(ctx)
+	serviceTags, err := articles.Tags(ctx)
 	if err != nil {
 		return s, fmt.Errorf("list tags: %w", err)
 	}
@@ -29,7 +29,7 @@ func Run(ctx context.Context, articles Articles, cl Classifier, f Failures, log 
 	if err != nil {
 		return s, fmt.Errorf("list unread entries: %w", err)
 	}
-	existing := Existing(wallabagTags)
+	existing := Existing(serviceTags)
 
 	defer func() {
 		if saveErr := f.Save(); saveErr != nil {

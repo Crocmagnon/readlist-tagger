@@ -48,8 +48,8 @@ func (d Decision) Tags() []Tag { return slices.Clone(d.tags) }
 func (d Decision) Created() (Tag, bool) { return d.created, d.created != "" }
 
 // Existing returns the seed tags and the given tags, deduplicated and sorted.
-func Existing(wallabagTags []Tag) []Tag {
-	all := slices.Clone(wallabagTags)
+func Existing(serviceTags []Tag) []Tag {
+	all := slices.Clone(serviceTags)
 	for _, s := range Seeds {
 		all = append(all, s.Name)
 	}

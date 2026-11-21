@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Crocmagnon/wallabag-tagger/internal/domain/tagging"
+	"github.com/Crocmagnon/readlist-tagger/internal/domain/tagging"
 )
 
 func readFixture(t *testing.T, name string) []byte {
@@ -123,6 +123,7 @@ func TestClassifyTimesOut(t *testing.T) {
 func TestClassifyPassesOnlyAllowedEnv(t *testing.T) {
 	t.Setenv("WALLABAG_PASSWORD", "secret-pass")
 	t.Setenv("WALLABAG_CLIENT_SECRET", "secret-client")
+	t.Setenv("READECK_TOKEN", "secret-token")
 	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "oauth-token")
 	dir := t.TempDir()
 	ok, err := filepath.Abs(filepath.Join("testdata", "ok.json"))
